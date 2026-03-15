@@ -18,10 +18,10 @@ sg status         # see your savings
 
 Sandgrouse is a local proxy that sits between your AI tools and the cloud. It optimizes every byte before it leaves your device:
 
-- **Compression** -- Enforces gzip/brotli on all LLM API traffic (70-80% reduction)
-- **Deduplication** -- Eliminates repeated content: system prompts, unchanged files, re-sent conversation history
-- **Delta encoding** -- For files your coding tools re-read, sends only what changed
-- **Dashboard** -- Real-time view of bandwidth savings at localhost:8585
+- **Compression** - Enforces gzip/brotli on all LLM API traffic (70-80% reduction)
+- **Deduplication** - Eliminates repeated content: system prompts, unchanged files, re-sent conversation history
+- **Delta encoding** - For files your coding tools re-read, sends only what changed
+- **Dashboard** - Real-time view of bandwidth savings at localhost:8585
 
 Everything runs locally on your machine. No data is sent anywhere except the original API destination.
 
@@ -29,7 +29,7 @@ Everything runs locally on your machine. No data is sent anywhere except the ori
 
 AI tools assume unlimited bandwidth. That assumption excludes most of the world.
 
-If you've ever watched a data bundle vanish during a Claude Code session, rationed your AI usage based on mobile data budget, or kept working through a power outage on a phone hotspot -- this is for you.
+If you've ever watched a data bundle vanish during a Claude Code session, rationed your AI usage based on mobile data budget, or kept working through a power outage on a phone hotspot - this is for you.
 
 Read the full story: [MANIFESTO.md](MANIFESTO.md)
 
@@ -134,4 +134,4 @@ MIT
 
 ---
 
-_Built from Nairobi by [Joe Kariuki](https://github.com/jokariuki). Open source._
+_Built by [Joe Kariuki](https://github.com/jokariuki). Open source._
