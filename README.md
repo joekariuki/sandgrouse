@@ -134,4 +134,4 @@ MIT
 
 ---
 
-_Built by [Joe Kariuki](https://github.com/jokariuki). Open source._
+_Built by [Joe Kariuki](https://github.com/joekariuki). Open source._
