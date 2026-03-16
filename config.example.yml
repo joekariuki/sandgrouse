@@ -1,0 +1,31 @@
+# Sandgrouse configuration
+# Location: ~/.sandgrouse/config.yml
+# Documentation: https://github.com/jokariuki/sandgrouse
+
+proxy:
+  port: 8080                    # Proxy listening port
+  dashboard_port: 8585          # Web dashboard port
+
+compression:
+  algorithm: brotli             # brotli (better ratio) or gzip (wider compatibility)
+  level: default                # default, fast, or best
+
+providers:
+  anthropic:
+    enabled: true
+    base_url: https://api.anthropic.com
+  openai:
+    enabled: true
+    base_url: https://api.openai.com
+  gemini:
+    enabled: true
+    base_url: https://generativelanguage.googleapis.com
+
+stats:
+  enabled: true
+  db_path: ~/.sandgrouse/stats.db
+  retention_days: 90            # How long to keep historical stats
+
+logging:
+  level: info                   # debug, info, warn, error
+  file: ~/.sandgrouse/logs/sg.log

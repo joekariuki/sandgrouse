@@ -100,6 +100,8 @@ providers:
     enabled: true
   openai:
     enabled: true
+  gemini:
+    enabled: true
 ```
 
 ## Roadmap
@@ -114,6 +116,8 @@ providers:
 - [ ] Browser extension for Claude.ai / ChatGPT
 - [ ] Mobile optimization
 
+See [ROADMAP.md](ROADMAP.md) for the full roadmap and [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ## Why "sandgrouse"?
 
 The sandgrouse is an African bird with a remarkable adaptation: its breast feathers absorb water like a sponge. Every morning, it flies up to 30km across the desert to a waterhole, soaks its feathers, and flies back to its chicks. The most efficient water transport system in nature.
@@ -126,7 +130,7 @@ This project is just getting started. If you experience the bandwidth problem th
 
 - Star the repo if this resonates
 - Open an issue to share your experience or suggest features
-- PRs welcome -- see [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon)
+- PRs welcome - see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 

@@ -1,0 +1,52 @@
+# Binaries
+sg
+sandgrouse
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build output
+dist/
+build/
+
+# Go
+vendor/
+go.work
+
+# Test
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sandgrouse local data
+.sandgrouse/
+
+# npm wrapper
+npm/node_modules/
+npm/package-lock.json
+
+# Docs site
+docs/node_modules/
+docs/.next/
+docs/out/
+
+# Internal planning docs
+docs/planning/
+
+# Environment
+.env
+.env.local
