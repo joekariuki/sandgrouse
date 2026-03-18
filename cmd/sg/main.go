@@ -1,7 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"log"
+
+	"github.com/joekariuki/sandgrouse/internal/proxy"
+)
 
 func main() {
-	fmt.Println("sandgrouse v0.1.0-dev")
+	srv := &proxy.Server{
+		ListenAddr: ":8080",
+	}
+	if err := srv.Start(); err != nil {
+		log.Fatalf("failed to start proxy: %v", err)
+	}
 }
