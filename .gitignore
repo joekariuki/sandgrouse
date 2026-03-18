@@ -1,6 +1,6 @@
 # Binaries
-sg
-sandgrouse
+/sg
+/sandgrouse
 *.exe
 *.exe~
 *.dll
