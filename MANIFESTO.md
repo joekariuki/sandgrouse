@@ -18,7 +18,7 @@ In Sub-Saharan Africa alone, 1GB of data costs 2.4% of average monthly income, a
 
 The developers building AI tools don't experience this. They're in San Francisco, New York, London - cities where gigabit fiber is cheap and Wi-Fi is everywhere. They've never had to think about how many megabytes a single API call consumes, because for them, the answer doesn't matter.
 
-Maybe sth like its not something they have to consider in their environment.
+<!-- Maybe sth like its not something they have to consider in their environment. -->
 
 For the rest of us, it matters a lot.
 
@@ -46,7 +46,7 @@ The proxy is transparent. Your AI tools don't know it's there. You install it, s
 
 ## Why "sandgrouse"
 
-The sandgrouse is a bird found across Africa, Asia, and Southern Europe. The male sandgrouse has a remarkable adaptation: its breast feathers can absorb and hold water like a sponge. Every morning, it flies up to 30 kilometers to a waterhole, soaks its feathers, and flies back across the desert to its chicks, who drink the water from its plumage.
+The [Sandgrouse](https://www.youtube.com/watch?v=BAf4KNUDkFc) is a bird found across Africa, Asia, and Southern Europe. The male sandgrouse has a remarkable adaptation: its breast feathers can absorb and hold water like a sponge. Every morning, it flies up to 30 kilometers to a waterhole, soaks its feathers, and flies back across the desert to its chicks, who drink the water from its plumage.
 
 It's the most efficient water transport system in nature. A small body carrying maximum payload across harsh, resource-scarce terrain.
 
