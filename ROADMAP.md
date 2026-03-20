@@ -10,7 +10,7 @@ Local compression proxy for developers using Claude Code, Cursor, and OpenAI-com
 
 - Transparent HTTP proxy with gzip/brotli compression
 - Context deduplication for repeated content
-- CLI commands (`sg start`, `sg stop`, `sg status`, `sg config`)
+- CLI commands (`sg start`, `sg stop`, `sg stats`,`sg status`, `sg config`)
 - Real-time web dashboard with bandwidth savings visualization
 - Bandwidth tracking with SQLite storage
 - Anthropic, OpenAI, and Google Gemini provider support
