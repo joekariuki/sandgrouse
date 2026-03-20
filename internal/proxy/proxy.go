@@ -23,17 +23,21 @@ var hopByHopHeaders = []string{
 // Server is the sandgrouse proxy server.
 type Server struct {
 	ListenAddr string
+	Algorithm  string // "gzip" or "brotli" (default: "brotli")
 	client     *http.Client
 }
 
 // Start begins listening for HTTP requests and forwarding to upstream APIs.
 func (s *Server) Start() error {
 	s.client = &http.Client{}
+	if s.Algorithm == "" {
+		s.Algorithm = "brotli"
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleProxy)
 
-	log.Printf("sandgrouse proxy listening on %s", s.ListenAddr)
+	log.Printf("sandgrouse proxy listening on %s (compression: %s)", s.ListenAddr, s.Algorithm)
 	return http.ListenAndServe(s.ListenAddr, mux)
 }
 
@@ -67,7 +71,7 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	outBody = body
 	compressed := false
 	if originalSize > 0 && provider.CompressRequests {
-		outBody, err = compressGzip(body)
+		outBody, err = compress(body, s.Algorithm)
 		if err != nil {
 			log.Printf("compression failed, sending uncompressed: %v", err)
 			outBody = body
@@ -97,12 +101,12 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 
 	// Set compression headers
 	if compressed {
-		outReq.Header.Set("Content-Encoding", "gzip")
+		outReq.Header.Set("Content-Encoding", contentEncoding(s.Algorithm))
 		outReq.ContentLength = int64(len(outBody))
 	}
 
 	// Request compressed responses from upstream
-	outReq.Header.Set("Accept-Encoding", "gzip")
+	outReq.Header.Set("Accept-Encoding", "gzip, br")
 
 	log.Printf("%s %s -> %s | request: %d bytes -> %d bytes (%.0f%% reduction)",
 		r.Method, r.URL.Path, upstream.String(),
