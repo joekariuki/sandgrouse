@@ -13,7 +13,7 @@ type Provider struct {
 }
 
 var providers = map[string]Provider{
-	"anthropic": {Name: "anthropic", BaseURL: "https://api.anthropic.com", CompressRequests: true},
+	"anthropic": {Name: "anthropic", BaseURL: "https://api.anthropic.com", CompressRequests: false},
 	"openai":    {Name: "openai", BaseURL: "https://api.openai.com", CompressRequests: false},
 }
 
