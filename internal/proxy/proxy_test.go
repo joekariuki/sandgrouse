@@ -14,6 +14,10 @@ func TestHandleProxy(t *testing.T) {
 		w.Header().Set("X-Test-Path", r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
 		body, _ := io.ReadAll(r.Body)
+		//  Decompress if the request body is gzip-compressed
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			body, _ = decompressGzip(body)
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Write(body)
 	}))

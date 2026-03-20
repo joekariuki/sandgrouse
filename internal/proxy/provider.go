@@ -7,13 +7,14 @@ import (
 
 // Provider represents an upstream LLM API provider.
 type Provider struct {
-	Name    string
-	BaseURL string
+	Name             string
+	BaseURL          string
+	CompressRequests bool
 }
 
 var providers = map[string]Provider{
-	"anthropic": {Name: "anthropic", BaseURL: "https://api.anthropic.com"},
-	"openai":    {Name: "openai", BaseURL: "https://api.openai.com"},
+	"anthropic": {Name: "anthropic", BaseURL: "https://api.anthropic.com", CompressRequests: true},
+	"openai":    {Name: "openai", BaseURL: "https://api.openai.com", CompressRequests: false},
 }
 
 // detectProvider identifies the LLM provider from request headers.

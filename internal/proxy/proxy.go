@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"net/http"
@@ -53,8 +54,30 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	upstream.Path = r.URL.Path
 	upstream.RawQuery = r.URL.RawQuery
 
-	// Create outgoing request
-	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, upstream.String(), r.Body)
+	// Read the original request body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read request body", http.StatusInternalServerError)
+		return
+	}
+
+	// Compress the request body
+	originalSize := len(body)
+	var outBody []byte
+	outBody = body
+	compressed := false
+	if originalSize > 0 && provider.CompressRequests {
+		outBody, err = compressGzip(body)
+		if err != nil {
+			log.Printf("compression failed, sending uncompressed: %v", err)
+			outBody = body
+		} else {
+			compressed = true
+		}
+	}
+
+	// Create outgoing request with compressed body
+	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, upstream.String(), bytes.NewReader(outBody))
 	if err != nil {
 		http.Error(w, "failed to create upstream request", http.StatusInternalServerError)
 		return
@@ -72,7 +95,19 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 		outReq.Header.Del(h)
 	}
 
-	log.Printf("%s %s -> %s", r.Method, r.URL.Path, upstream.String())
+	// Set compression headers
+	if compressed {
+		outReq.Header.Set("Content-Encoding", "gzip")
+		outReq.ContentLength = int64(len(outBody))
+	}
+
+	// Request compressed responses from upstream
+	outReq.Header.Set("Accept-Encoding", "gzip")
+
+	log.Printf("%s %s -> %s | request: %d bytes -> %d bytes (%.0f%% reduction)",
+		r.Method, r.URL.Path, upstream.String(),
+		originalSize, len(outBody),
+		compressionRatio(originalSize, len(outBody)))
 
 	// Send request to upstream
 	resp, err := s.client.Do(outReq)
@@ -93,5 +128,12 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 
 	// Copy response body back to client
 	io.Copy(w, resp.Body)
+}
 
+// compressionRatio calculate the percentage reduction.
+func compressionRatio(original, compressed int) float64 {
+	if original == 0 {
+		return 0
+	}
+	return (1 - float64(compressed)/float64(original)) * 100
 }
