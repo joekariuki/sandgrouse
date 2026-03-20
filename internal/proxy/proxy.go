@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // hopByHopHeaders are headers that must not be forwarded by proxies (RFC 9110 §7.6.1).
@@ -25,14 +26,26 @@ type Server struct {
 	ListenAddr string
 	Algorithm  string // "gzip" or "brotli" (default: "brotli")
 	client     *http.Client
+	stats      *Stats
 }
 
 // Start begins listening for HTTP requests and forwarding to upstream APIs.
 func (s *Server) Start() error {
 	s.client = &http.Client{}
+	s.stats = &Stats{}
 	if s.Algorithm == "" {
 		s.Algorithm = "brotli"
 	}
+
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			if s.stats.totalRequests.Load() > 0 {
+				log.Printf("[stats] %s", s.stats.Summary())
+			}
+		}
+	}()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleProxy)
@@ -112,6 +125,9 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 		r.Method, r.URL.Path, upstream.String(),
 		originalSize, len(outBody),
 		compressionRatio(originalSize, len(outBody)))
+
+	// Record bandwidth stats
+	s.stats.Record(int64(originalSize), int64(len(outBody)))
 
 	// Send request to upstream
 	resp, err := s.client.Do(outReq)

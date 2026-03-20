@@ -30,7 +30,7 @@ func TestHandleProxy(t *testing.T) {
 	}
 	defer func() { providers = originalProviders }()
 
-	srv := &Server{ListenAddr: ":0", client: &http.Client{}}
+	srv := &Server{ListenAddr: ":0", client: &http.Client{}, stats: &Stats{}}
 
 	t.Run("forwards request to upstream and returns response", func(t *testing.T) {
 		reqBody := `{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":"hi"}]}`
