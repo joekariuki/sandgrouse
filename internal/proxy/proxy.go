@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -146,8 +147,13 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(resp.StatusCode)
 
-	// Copy response body back to client
-	io.Copy(w, resp.Body)
+	// Stream SSE responses with immediate flushing, buffer everything else
+	if isSSE(resp) {
+		streamResponse(resp.Body, w)
+	} else {
+		io.Copy(w, resp.Body)
+
+	}
 }
 
 // compressionRatio calculate the percentage reduction.
@@ -156,4 +162,32 @@ func compressionRatio(original, compressed int) float64 {
 		return 0
 	}
 	return (1 - float64(compressed)/float64(original)) * 100
+}
+
+// isSSE returns true if the response is a server-sent events stream.
+func isSSE(resp *http.Response) bool {
+	ct := resp.Header.Get("Content-Type")
+	return strings.HasPrefix(ct, "text/event-stream")
+}
+
+// streamResponse copies an SSE stream to the client, flushing after each chunk.
+func streamResponse(src io.Reader, dst http.ResponseWriter) {
+	flusher, ok := dst.(http.Flusher)
+	if !ok {
+		// ResponseWriter doesn't support flushing, fall back to buffered copy
+		io.Copy(dst, src)
+		return
+	}
+
+	buf := make([]byte, 4096)
+	for {
+		n, err := src.Read(buf)
+		if n > 0 {
+			dst.Write(buf[:n])
+			flusher.Flush()
+		}
+		if err != nil {
+			return
+		}
+	}
 }
