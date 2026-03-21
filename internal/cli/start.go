@@ -1,8 +1,13 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joekariuki/sandgrouse/internal/proxy"
 	"github.com/spf13/cobra"
@@ -23,8 +28,30 @@ var startCmd = &cobra.Command{
 			ListenAddr: addr,
 			Algorithm:  algo,
 		}
-		if err := srv.Start(); err != nil {
-			log.Fatalf("failed to start proxy: %v", err)
+
+		// Start server in a goroutine
+		errCh := make(chan error, 1)
+		go func() {
+			errCh <- srv.Start()
+		}()
+
+		// Wait for signal or server error
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+		select {
+		case sig := <-sigCh:
+			log.Printf("received %s, shutting down...", sig)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := srv.Shutdown(ctx); err != nil {
+				log.Printf("shutdown error: %v", err)
+			}
+			log.Println("sandgrouse stopped")
+		case err := <-errCh:
+			if err != nil {
+				log.Fatalf("failed to start proxy: %v", err)
+			}
 		}
 	},
 }

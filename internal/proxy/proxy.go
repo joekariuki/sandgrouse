@@ -2,6 +2,8 @@ package proxy
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -28,6 +30,8 @@ type Server struct {
 	Algorithm  string // "gzip" or "brotli" (default: "brotli")
 	client     *http.Client
 	stats      *Stats
+	httpServer *http.Server
+	startedAt  time.Time
 }
 
 // Start begins listening for HTTP requests and forwarding to upstream APIs.
@@ -51,8 +55,28 @@ func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleProxy)
 
+	s.httpServer = &http.Server{
+		Addr:    s.ListenAddr,
+		Handler: mux,
+	}
+	s.startedAt = time.Now()
+
 	log.Printf("sandgrouse proxy listening on %s (compression: %s)", s.ListenAddr, s.Algorithm)
-	return http.ListenAndServe(s.ListenAddr, mux)
+	err := s.httpServer.ListenAndServe()
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
+}
+
+// Shutdown gracefully shuts down the proxy server, draining in-flight requests.
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.httpServer.Shutdown(ctx)
+}
+
+// Uptime returns how long the server has been running.
+func (s *Server) Uptime() time.Duration {
+	return time.Since(s.startedAt)
 }
 
 func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {

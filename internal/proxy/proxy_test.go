@@ -1,11 +1,14 @@
 package proxy
 
 import (
+	"context"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHandleProxy(t *testing.T) {
@@ -158,5 +161,58 @@ func TestHandleProxyWithCompressedResponse(t *testing.T) {
 	origBytes := srv.stats.responseOriginalBytes.Load()
 	if wireBytes >= origBytes {
 		t.Errorf("wire bytes (%d) should be less than original bytes (%d)", wireBytes, origBytes)
+	}
+}
+
+func TestServerShutdown(t *testing.T) {
+	// Find a free port
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to find free port: %v", err)
+	}
+	port := ln.Addr().String()
+	ln.Close()
+
+	srv := &Server{
+		ListenAddr: port,
+		Algorithm:  "gzip",
+	}
+
+	// Start server in goroutine
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.Start()
+	}()
+
+	// Wait for server to be ready
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify server is listening
+	resp, err := http.Get("http://" + port + "/")
+	if err != nil {
+		t.Fatalf("server not responding: %v", err)
+	}
+	resp.Body.Close()
+
+	// Verify uptime is positive
+	if srv.Uptime() <= 0 {
+		t.Errorf("Uptime() = %v, want > 0", srv.Uptime())
+	}
+
+	// Shutdown should cause Start() to return nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		t.Fatalf("Shutdown() error: %v", err)
+	}
+
+	// Start() should return nil (not an error)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Errorf("Start() returned error after shutdown: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Start() did not return after Shutdown()")
 	}
 }
