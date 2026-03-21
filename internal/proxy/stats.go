@@ -41,7 +41,7 @@ func (s *Stats) Summary() string {
 	saved := respOrig - respWire
 	pct := float64(saved) / float64(respOrig) * 100
 	return fmt.Sprintf("requests: %d | responses: %s on wire, %s original (%s saved, %.0f%% reduction)",
-		reqs, formatBytes(respWire), formatBytes(respOrig), formatBytes(saved), pct)
+		reqs, FormatBytes(respWire), FormatBytes(respOrig), FormatBytes(saved), pct)
 }
 
 // TotalRequests returns the total number of proxied requests.
@@ -115,8 +115,8 @@ func (s *Stats) LoadFrom(path string) error {
 	return nil
 }
 
-// formatBytes formats a byte count as a human-readable string.
-func formatBytes(b int64) string {
+// FormatBytes formats a byte count as a human-readable string.
+func FormatBytes(b int64) string {
 	switch {
 	case b >= 1<<30:
 		return fmt.Sprintf("%.1f GB", float64(b)/(1<<30))

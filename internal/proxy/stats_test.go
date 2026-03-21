@@ -88,8 +88,8 @@ func TestFormatBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
-			if got := formatBytes(tt.input); got != tt.want {
-				t.Errorf("formatBytes(%d) = %q, want %q", tt.input, got, tt.want)
+			if got := FormatBytes(tt.input); got != tt.want {
+				t.Errorf("FormatBytes(%d) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}

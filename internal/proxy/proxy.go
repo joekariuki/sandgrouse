@@ -150,7 +150,7 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%s %s -> %s | request: %s",
 		r.Method, r.URL.Path, upstream.String(),
-		formatBytes(int64(originalSize)))
+		FormatBytes(int64(originalSize)))
 
 	// Record bandwidth stats
 	s.stats.RecordRequest(int64(originalSize), int64(len(outBody)))
@@ -206,8 +206,8 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 
 		if wasCompressed {
 			log.Printf("  response: %s on wire -> %s decompressed (%.0f%% saved)",
-				formatBytes(wireCounter.bytesRead),
-				formatBytes(written),
+				FormatBytes(wireCounter.bytesRead),
+				FormatBytes(written),
 				compressionRatio(int(written), int(wireCounter.bytesRead)))
 			s.stats.RecordResponse(wireCounter.bytesRead, written)
 		} else {

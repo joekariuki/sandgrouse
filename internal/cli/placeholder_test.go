@@ -24,9 +24,9 @@ func TestCommandOutputs(t *testing.T) {
 			wantMsg: "not running",
 		},
 		{
-			name:    "stats prints placeholder",
+			name:    "stats shows no data when empty",
 			args:    []string{"stats"},
-			wantMsg: "not implemented yet",
+			wantMsg: "no stats recorded yet",
 		},
 	}
 
