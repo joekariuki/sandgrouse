@@ -30,6 +30,7 @@ type Server struct {
 	Algorithm  string // "gzip" or "brotli" (default: "brotli")
 	client     *http.Client
 	stats      *Stats
+	requestLog *RequestLog
 	httpServer *http.Server
 	startedAt  time.Time
 }
@@ -40,6 +41,7 @@ func (s *Server) Start() error {
 	if s.stats == nil {
 		s.stats = &Stats{}
 	}
+	s.requestLog = NewRequestLog(50)
 	if s.Algorithm == "" {
 		s.Algorithm = "brotli"
 	}
@@ -82,6 +84,7 @@ func (s *Server) Uptime() time.Duration {
 }
 
 func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
+	reqStart := time.Now()
 	provider, ok := detectProvider(r)
 
 	if !ok {
@@ -187,33 +190,44 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(resp.StatusCode)
 
 	// Stream SSE responses with immediate flushing, buffer everything else
+	var respWire, respOrig int64
 	if isSSE(resp) {
 		streamResponse(wireCounter, w)
-		// SSE is typically not compressed, wire bytes ≈ original bytes
-		s.stats.RecordResponse(wireCounter.bytesRead, wireCounter.bytesRead)
+		respWire = wireCounter.bytesRead
+		respOrig = wireCounter.bytesRead
 	} else {
-		// Decompress the response body to measure original size
 		decompReader, wasCompressed, err := decompressReader(wireCounter, respEncoding)
 		if err != nil {
 			log.Printf("response decompression failed: %v", err)
 			io.Copy(w, wireCounter)
-			s.stats.RecordResponse(wireCounter.bytesRead, wireCounter.bytesRead)
-			return
-		}
-		defer decompReader.Close()
-
-		written, _ := io.Copy(w, decompReader)
-
-		if wasCompressed {
-			log.Printf("  response: %s on wire -> %s decompressed (%.0f%% saved)",
-				FormatBytes(wireCounter.bytesRead),
-				FormatBytes(written),
-				compressionRatio(int(written), int(wireCounter.bytesRead)))
-			s.stats.RecordResponse(wireCounter.bytesRead, written)
+			respWire = wireCounter.bytesRead
+			respOrig = wireCounter.bytesRead
 		} else {
-			s.stats.RecordResponse(wireCounter.bytesRead, wireCounter.bytesRead)
+			defer decompReader.Close()
+			written, _ := io.Copy(w, decompReader)
+			respWire = wireCounter.bytesRead
+			respOrig = written
+			if wasCompressed {
+				log.Printf("  response: %s on wire -> %s decompressed (%.0f%% saved)",
+					FormatBytes(respWire), FormatBytes(respOrig),
+					compressionRatio(int(respOrig), int(respWire)))
+			}
 		}
 	}
+
+	s.stats.RecordResponse(respWire, respOrig)
+	if s.requestLog == nil {
+		return
+	}
+	s.requestLog.Add(RequestEvent{
+		Timestamp:    reqStart,
+		Method:       r.Method,
+		Path:         r.URL.Path,
+		Provider:     provider.Name,
+		RequestBytes: int64(originalSize),
+		ResponseWire: respWire,
+		ResponseOrig: respOrig,
+	})
 }
 
 // Stats returns the server's bandwidth statistics.
@@ -224,6 +238,11 @@ func (s *Server) Stats() *Stats {
 // SetStats sets pre-loaded stats on the server (must be called before Start).
 func (s *Server) SetStats(stats *Stats) {
 	s.stats = stats
+}
+
+// RequestLog returns the server's request event log.
+func (s *Server) RequestLog() *RequestLog {
+	return s.requestLog
 }
 
 // compressionRatio calculate the percentage reduction.
