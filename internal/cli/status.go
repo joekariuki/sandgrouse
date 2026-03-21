@@ -9,9 +9,21 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Check if proxy is running",
-	Long:  "Check the status of the sandgrouse proxy. Requires daemon mode (coming in a future release).",
+	Long:  "Check the status of the sandgrouse proxy.",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintln(cmd.OutOrStdout(), "sg status is not implemented yet — daemon mode coming soon.")
+		pid, err := readPID()
+		if err != nil {
+			fmt.Fprintln(cmd.OutOrStdout(), "sandgrouse is not running")
+			return
+		}
+
+		if !isProcessRunning(pid) {
+			fmt.Fprintln(cmd.OutOrStdout(), "sandgrouse is not running (stale PID file cleaned up)")
+			removePID()
+			return
+		}
+
+		fmt.Fprintf(cmd.OutOrStdout(), "sandgrouse is running (PID %d)\n", pid)
 	},
 }
 

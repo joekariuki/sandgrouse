@@ -2,25 +2,26 @@ package cli
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestPlaceholderCommands(t *testing.T) {
+func TestCommandOutputs(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    []string
 		wantMsg string
 	}{
 		{
-			name:    "stop prints placeholder",
+			name:    "stop shows not running when no PID",
 			args:    []string{"stop"},
-			wantMsg: "not implemented yet",
+			wantMsg: "not running",
 		},
 		{
-			name:    "status prints placeholder",
+			name:    "status shows not running when no PID",
 			args:    []string{"status"},
-			wantMsg: "not implemented yet",
+			wantMsg: "not running",
 		},
 		{
 			name:    "stats prints placeholder",
@@ -32,6 +33,11 @@ func TestPlaceholderCommands(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer resetRootCmd()
+			// Use temp dir so no real PID file is found
+			old := sgDirOverride
+			sgDirOverride = filepath.Join(t.TempDir(), ".sandgrouse")
+			defer func() { sgDirOverride = old }()
+
 			buf := new(bytes.Buffer)
 			rootCmd.SetOut(buf)
 			rootCmd.SetErr(buf)

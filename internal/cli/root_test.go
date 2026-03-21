@@ -64,4 +64,12 @@ func TestStartCommandHasFlags(t *testing.T) {
 	if algo.DefValue != "brotli" {
 		t.Errorf("--algorithm default = %q, want 'brotli'", algo.DefValue)
 	}
+
+	fg := cmd.Flags().Lookup("foreground")
+	if fg == nil {
+		t.Fatal("start command missing --foreground flag")
+	}
+	if fg.DefValue != "false" {
+		t.Errorf("--foreground default = %q, want 'false'", fg.DefValue)
+	}
 }
