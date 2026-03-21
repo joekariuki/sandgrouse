@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -38,6 +39,15 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 }
 
+// statsFilePath returns the path to the stats JSON file.
+func statsFilePath() string {
+	dir, err := sandgrouseDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "stats.json")
+}
+
 // runForeground starts the proxy in the current process with signal handling.
 func runForeground(cmd *cobra.Command, addr, algo string) {
 	// Write our PID so sg stop/status can find us
@@ -49,15 +59,38 @@ func runForeground(cmd *cobra.Command, addr, algo string) {
 	fmt.Fprint(cmd.OutOrStdout(), banner)
 	fmt.Fprintf(cmd.OutOrStdout(), "v%s | Stop burning data bundles on AI tools.\n\n", Version)
 
+	// Load persisted stats from previous sessions
+	stats := &proxy.Stats{}
+	statsPath := statsFilePath()
+	if statsPath != "" {
+		if err := stats.LoadFrom(statsPath); err != nil {
+			log.Printf("warning: could not load stats: %v", err)
+		}
+	}
+
 	srv := &proxy.Server{
 		ListenAddr: addr,
 		Algorithm:  algo,
 	}
+	srv.SetStats(stats)
 
 	// Start server in a goroutine
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- srv.Start()
+	}()
+
+	// Save stats periodically (every 60 seconds)
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			if statsPath != "" {
+				if err := stats.SaveTo(statsPath); err != nil {
+					log.Printf("warning: could not save stats: %v", err)
+				}
+			}
+		}
 	}()
 
 	// Wait for signal or server error
@@ -67,6 +100,12 @@ func runForeground(cmd *cobra.Command, addr, algo string) {
 	select {
 	case sig := <-sigCh:
 		log.Printf("received %s, shutting down...", sig)
+		// Save stats before shutdown
+		if statsPath != "" {
+			if err := stats.SaveTo(statsPath); err != nil {
+				log.Printf("warning: could not save stats on shutdown: %v", err)
+			}
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(ctx); err != nil {

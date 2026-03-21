@@ -37,7 +37,9 @@ type Server struct {
 // Start begins listening for HTTP requests and forwarding to upstream APIs.
 func (s *Server) Start() error {
 	s.client = &http.Client{}
-	s.stats = &Stats{}
+	if s.stats == nil {
+		s.stats = &Stats{}
+	}
 	if s.Algorithm == "" {
 		s.Algorithm = "brotli"
 	}
@@ -217,6 +219,11 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 // Stats returns the server's bandwidth statistics.
 func (s *Server) Stats() *Stats {
 	return s.stats
+}
+
+// SetStats sets pre-loaded stats on the server (must be called before Start).
+func (s *Server) SetStats(stats *Stats) {
+	s.stats = stats
 }
 
 // compressionRatio calculate the percentage reduction.

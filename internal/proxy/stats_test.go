@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -91,6 +92,56 @@ func TestFormatBytes(t *testing.T) {
 				t.Errorf("formatBytes(%d) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestStatsSaveAndLoad(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "stats.json")
+
+	// Create stats with data
+	s := &Stats{}
+	s.RecordRequest(1000, 800)
+	s.RecordRequest(2000, 1600)
+	s.RecordResponse(300, 1000)
+	s.RecordResponse(500, 2000)
+
+	// Save
+	if err := s.SaveTo(path); err != nil {
+		t.Fatalf("SaveTo() error: %v", err)
+	}
+
+	// Load into fresh stats
+	s2 := &Stats{}
+	if err := s2.LoadFrom(path); err != nil {
+		t.Fatalf("LoadFrom() error: %v", err)
+	}
+
+	// Verify all fields match
+	if s2.TotalRequests() != 2 {
+		t.Errorf("TotalRequests() = %d, want 2", s2.TotalRequests())
+	}
+	if s2.RequestOriginalBytes() != 3000 {
+		t.Errorf("RequestOriginalBytes() = %d, want 3000", s2.RequestOriginalBytes())
+	}
+	if s2.RequestCompressedBytes() != 2400 {
+		t.Errorf("RequestCompressedBytes() = %d, want 2400", s2.RequestCompressedBytes())
+	}
+	if s2.ResponseOriginalBytes() != 3000 {
+		t.Errorf("ResponseOriginalBytes() = %d, want 3000", s2.ResponseOriginalBytes())
+	}
+	if s2.ResponseWireBytes() != 800 {
+		t.Errorf("ResponseWireBytes() = %d, want 800", s2.ResponseWireBytes())
+	}
+}
+
+func TestStatsLoadMissingFile(t *testing.T) {
+	s := &Stats{}
+	err := s.LoadFrom(filepath.Join(t.TempDir(), "nonexistent.json"))
+	if err != nil {
+		t.Errorf("LoadFrom() should return nil for missing file, got: %v", err)
+	}
+	if s.TotalRequests() != 0 {
+		t.Errorf("TotalRequests() = %d, want 0 after loading missing file", s.TotalRequests())
 	}
 }
 
