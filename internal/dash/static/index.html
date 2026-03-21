@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sandgrouse Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Header */
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; background: #161b22; border-radius: 8px;
+    margin-bottom: 20px; border: 1px solid #30363d;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; letter-spacing: 1px; }
+  .header .version { color: #8b949e; font-size: 13px; }
+  .live-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #3fb950; margin-right: 6px; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* Hero Stats */
+  .hero {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 20px; text-align: center;
+  }
+  .stat-value {
+    font-size: 36px; font-weight: 700; color: #E8A35E;
+    line-height: 1.2;
+  }
+  .stat-label { font-size: 12px; color: #8b949e; margin-top: 4px; text-transform: uppercase; }
+
+  /* All-time bar */
+  .alltime-bar {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 12px 20px; margin-bottom: 20px; font-size: 13px; color: #8b949e;
+  }
+  .alltime-bar span { color: #D4884A; font-weight: 600; }
+
+  /* Request Feed */
+  .feed-header {
+    font-size: 13px; color: #8b949e; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .feed {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    max-height: 400px; overflow-y: auto;
+  }
+  .feed-item {
+    padding: 10px 16px; border-bottom: 1px solid #21262d;
+    font-size: 13px; font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-time { color: #8b949e; margin-right: 8px; }
+  .feed-method { color: #E8A35E; font-weight: 600; margin-right: 6px; }
+  .feed-path { color: #e6edf3; margin-right: 8px; }
+  .feed-provider { color: #8b949e; }
+  .feed-sizes { color: #8b949e; font-size: 12px; margin-top: 2px; }
+  .feed-empty { padding: 40px; text-align: center; color: #8b949e; }
+
+  /* Footer */
+  .footer {
+    margin-top: 20px; padding: 12px 20px; font-size: 12px; color: #8b949e;
+    display: flex; justify-content: space-between;
+  }
+
+  /* Status indicator */
+  .status-disconnected .live-dot { background: #f85149; animation: none; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .hero { grid-template-columns: 1fr; }
+    .stat-value { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="header">
+    <h1>SANDGROUSE</h1>
+    <div><span class="live-dot" id="liveDot"></span><span class="version" id="versionText">v0.1.0-dev</span></div>
+  </div>
+
+  <div class="hero">
+    <div class="stat-card">
+      <div class="stat-value" id="sessionRequests">0</div>
+      <div class="stat-label">Requests</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="sessionSavings">0 B</div>
+      <div class="stat-label">Response Savings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="sessionPct">0%</div>
+      <div class="stat-label">Reduction</div>
+    </div>
+  </div>
+
+  <div class="alltime-bar">
+    ALL TIME: <span id="alltimeRequests">0</span> requests |
+    <span id="alltimeSavings">0 B</span> saved |
+    <span id="alltimeRequestData">0 B</span> request data
+  </div>
+
+  <div class="feed-header">Live Request Feed</div>
+  <div class="feed" id="feed">
+    <div class="feed-empty" id="feedEmpty">Waiting for requests...</div>
+  </div>
+
+  <div class="footer">
+    <div id="uptimeText">Uptime: 0s</div>
+    <div>Proxy: localhost:8080</div>
+  </div>
+</div>
+
+<script>
+function formatBytes(b) {
+  if (b >= 1073741824) return (b / 1073741824).toFixed(1) + ' GB';
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  if (b >= 1024) return (b / 1024).toFixed(1) + ' KB';
+  return b + ' B';
+}
+
+function formatTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-GB', { hour12: false });
+}
+
+function formatUptime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return h + 'h ' + m + 'm';
+  if (m > 0) return m + 'm ' + s + 's';
+  return s + 's';
+}
+
+let uptimeSeconds = 0;
+
+function updateStats(data) {
+  const s = data.session;
+  const a = data.all_time;
+  uptimeSeconds = data.uptime_seconds;
+
+  document.getElementById('sessionRequests').textContent = s.requests;
+  document.getElementById('sessionSavings').textContent = formatBytes(s.savings_bytes);
+  document.getElementById('sessionPct').textContent = Math.round(s.savings_pct) + '%';
+
+  document.getElementById('alltimeRequests').textContent = a.requests;
+  document.getElementById('alltimeSavings').textContent = formatBytes(a.savings_bytes);
+  document.getElementById('alltimeRequestData').textContent = formatBytes(a.request_bytes);
+
+  document.getElementById('uptimeText').textContent = 'Uptime: ' + formatUptime(uptimeSeconds);
+}
+
+function addRequestToFeed(event) {
+  const feed = document.getElementById('feed');
+  const empty = document.getElementById('feedEmpty');
+  if (empty) empty.remove();
+
+  const item = document.createElement('div');
+  item.className = 'feed-item';
+  item.innerHTML =
+    '<div>' +
+      '<span class="feed-time">' + formatTime(event.timestamp) + '</span>' +
+      '<span class="feed-method">' + event.method + '</span>' +
+      '<span class="feed-path">' + event.path + '</span>' +
+      '<span class="feed-provider">' + event.provider + '</span>' +
+    '</div>' +
+    '<div class="feed-sizes">' +
+      formatBytes(event.request_bytes) + ' req → ' +
+      formatBytes(event.response_wire) + ' wire / ' +
+      formatBytes(event.response_orig) + ' orig' +
+    '</div>';
+
+  feed.insertBefore(item, feed.firstChild);
+
+  // Keep max 50 items
+  while (feed.children.length > 50) {
+    feed.removeChild(feed.lastChild);
+  }
+}
+
+// Load initial data
+fetch('/api/stats').then(r => r.json()).then(updateStats).catch(() => {});
+fetch('/api/requests/recent').then(r => r.json()).then(events => {
+  if (events && events.length > 0) {
+    events.forEach(addRequestToFeed);
+  }
+}).catch(() => {});
+
+// SSE connection
+const evtSource = new EventSource('/api/events');
+evtSource.addEventListener('stats', function(e) {
+  updateStats(JSON.parse(e.data));
+});
+evtSource.addEventListener('request', function(e) {
+  addRequestToFeed(JSON.parse(e.data));
+});
+evtSource.onerror = function() {
+  document.getElementById('app').classList.add('status-disconnected');
+};
+evtSource.onopen = function() {
+  document.getElementById('app').classList.remove('status-disconnected');
+};
+
+// Uptime ticker
+setInterval(function() {
+  uptimeSeconds++;
+  document.getElementById('uptimeText').textContent = 'Uptime: ' + formatUptime(uptimeSeconds);
+}, 1000);
+</script>
+</body>
+</html>

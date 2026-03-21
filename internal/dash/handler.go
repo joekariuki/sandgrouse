@@ -142,5 +142,5 @@ func (d *Dashboard) sendStatsEvent(w http.ResponseWriter, flusher http.Flusher) 
 
 func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte("<html><body><h1>Sandgrouse Dashboard</h1><p>Coming soon</p></body></html>"))
+	w.Write(indexHTML)
 }

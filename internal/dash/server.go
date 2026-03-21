@@ -2,12 +2,16 @@ package dash
 
 import (
 	"context"
+	_ "embed"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/joekariuki/sandgrouse/internal/proxy"
 )
+
+//go:embed static/index.html
+var indexHTML []byte
 
 // ProxySource abstracts the proxy data the dashboard needs.
 type ProxySource interface {
