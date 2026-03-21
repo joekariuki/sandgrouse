@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"bytes"
+	"io"
 	"testing"
 )
 
@@ -118,5 +120,95 @@ func TestBrotliBeatGzipOnJson(t *testing.T) {
 
 	if len(brotlied) >= len(gzipped) {
 		t.Errorf("brotli (%d) should produce smaller output than gzip (%d) on JSON", len(brotlied), len(gzipped))
+	}
+}
+
+func TestCountingReader(t *testing.T) {
+	data := []byte("hello, sandgrouse proxy!")
+	cr := &countingReader{reader: bytes.NewReader(data)}
+
+	buf, err := io.ReadAll(cr)
+	if err != nil {
+		t.Fatalf("ReadAll error: %v", err)
+	}
+	if string(buf) != string(data) {
+		t.Errorf("got %q, want %q", string(buf), string(data))
+	}
+	if cr.bytesRead != int64(len(data)) {
+		t.Errorf("bytesRead = %d, want %d", cr.bytesRead, len(data))
+	}
+}
+
+func TestDecompressReaderGzip(t *testing.T) {
+	original := []byte(`{"model":"claude-sonnet-4-20250514","content":"test response data"}`)
+	compressed, err := compressGzip(original)
+	if err != nil {
+		t.Fatalf("compressGzip error: %v", err)
+	}
+
+	reader, decompressed, err := decompressReader(bytes.NewReader(compressed), "gzip")
+	if err != nil {
+		t.Fatalf("decompressReader error: %v", err)
+	}
+	defer reader.Close()
+
+	if !decompressed {
+		t.Error("expected decompressed=true for gzip")
+	}
+
+	result, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("ReadAll error: %v", err)
+	}
+	if string(result) != string(original) {
+		t.Errorf("got %q, want %q", string(result), string(original))
+	}
+}
+
+func TestDecompressReaderBrotli(t *testing.T) {
+	original := []byte(`{"model":"claude-sonnet-4-20250514","content":"test response data"}`)
+	compressed, err := compressBrotli(original)
+	if err != nil {
+		t.Fatalf("compressBrotli error: %v", err)
+	}
+
+	reader, decompressed, err := decompressReader(bytes.NewReader(compressed), "br")
+	if err != nil {
+		t.Fatalf("decompressReader error: %v", err)
+	}
+	defer reader.Close()
+
+	if !decompressed {
+		t.Error("expected decompressed=true for br")
+	}
+
+	result, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("ReadAll error: %v", err)
+	}
+	if string(result) != string(original) {
+		t.Errorf("got %q, want %q", string(result), string(original))
+	}
+}
+
+func TestDecompressReaderNoEncoding(t *testing.T) {
+	data := []byte(`{"raw":"uncompressed data"}`)
+
+	reader, decompressed, err := decompressReader(bytes.NewReader(data), "")
+	if err != nil {
+		t.Fatalf("decompressReader error: %v", err)
+	}
+	defer reader.Close()
+
+	if decompressed {
+		t.Error("expected decompressed=false for empty encoding")
+	}
+
+	result, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("ReadAll error: %v", err)
+	}
+	if string(result) != string(data) {
+		t.Errorf("got %q, want %q", string(result), string(data))
 	}
 }
