@@ -61,6 +61,8 @@ func runForeground(cmd *cobra.Command, addr, algo, dashAddr string) {
 
 	fmt.Fprint(cmd.OutOrStdout(), banner)
 	fmt.Fprintf(cmd.OutOrStdout(), "v%s | Stop burning data bundles on AI tools.\n\n", Version)
+	fmt.Fprintf(cmd.OutOrStdout(), "Proxy listening on localhost%s\n", addr)
+	fmt.Fprintf(cmd.OutOrStdout(), "Dashboard at http://localhost%s\n\n", dashAddr)
 
 	// Load persisted stats from previous sessions
 	stats := &proxy.Stats{}

@@ -31,7 +31,15 @@ var welcome = banner +
 	"\n" +
 	"Setup your AI tools:\n" +
 	"  export ANTHROPIC_BASE_URL=http://localhost:8080   # Claude Code\n" +
-	"  export OPENAI_BASE_URL=http://localhost:8080       # Cursor / OpenAI\n"
+	"  export OPENAI_BASE_URL=http://localhost:8080       # Cursor / OpenAI\n" +
+	"\n" +
+	"Dashboard:\n" +
+	"  http://localhost:8585     Real-time bandwidth savings\n" +
+	"\n" +
+	"Learn more:\n" +
+	"  sg --help                 All commands\n" +
+	"  sandgrouse.dev            Documentation\n" +
+	"  github.com/joekariuki/sandgrouse   Source code\n"
 
 var rootCmd = &cobra.Command{
 	Use:   "sg",

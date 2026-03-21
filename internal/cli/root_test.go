@@ -28,6 +28,10 @@ func TestRootCommandShowsBanner(t *testing.T) {
 		"sg start",
 		"sg stop",
 		"ANTHROPIC_BASE_URL",
+		"Dashboard",
+		"localhost:8585",
+		"sandgrouse.dev",
+		"sg --help",
 	}
 	for _, part := range wantParts {
 		if !strings.Contains(output, part) {
