@@ -122,10 +122,9 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	// Request compressed responses from upstream
 	outReq.Header.Set("Accept-Encoding", "gzip, br")
 
-	log.Printf("%s %s -> %s | request: %d bytes -> %d bytes (%.0f%% reduction)",
+	log.Printf("%s %s -> %s | request: %s",
 		r.Method, r.URL.Path, upstream.String(),
-		originalSize, len(outBody),
-		compressionRatio(originalSize, len(outBody)))
+		formatBytes(int64(originalSize)))
 
 	// Record bandwidth stats
 	s.stats.RecordRequest(int64(originalSize), int64(len(outBody)))
@@ -139,20 +138,55 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
+	// Wrap response body in counting reader to measure wire bytes
+	wireCounter := &countingReader{reader: resp.Body}
+
+	// Get the content encoding from upstream response
+	respEncoding := resp.Header.Get("Content-Encoding")
+
 	// Copy response headers back to client
 	for key, values := range resp.Header {
 		for _, v := range values {
 			w.Header().Add(key, v)
 		}
 	}
+
+	// If upstream sent compressed response, decompress before forwarding to client
+	// (localhost leg is free, no need to keep it compressed)
+	if respEncoding != "" {
+		w.Header().Del("Content-Encoding")
+		w.Header().Del("Content-Length") // length changes after decompression
+	}
+
 	w.WriteHeader(resp.StatusCode)
 
 	// Stream SSE responses with immediate flushing, buffer everything else
 	if isSSE(resp) {
-		streamResponse(resp.Body, w)
+		streamResponse(wireCounter, w)
+		// SSE is typically not compressed, wire bytes ≈ original bytes
+		s.stats.RecordResponse(wireCounter.bytesRead, wireCounter.bytesRead)
 	} else {
-		io.Copy(w, resp.Body)
+		// Decompress the response body to measure original size
+		decompReader, wasCompressed, err := decompressReader(wireCounter, respEncoding)
+		if err != nil {
+			log.Printf("response decompression failed: %v", err)
+			io.Copy(w, wireCounter)
+			s.stats.RecordResponse(wireCounter.bytesRead, wireCounter.bytesRead)
+			return
+		}
+		defer decompReader.Close()
 
+		written, _ := io.Copy(w, decompReader)
+
+		if wasCompressed {
+			log.Printf("  response: %s on wire -> %s decompressed (%.0f%% saved)",
+				formatBytes(wireCounter.bytesRead),
+				formatBytes(written),
+				compressionRatio(int(written), int(wireCounter.bytesRead)))
+			s.stats.RecordResponse(wireCounter.bytesRead, written)
+		} else {
+			s.stats.RecordResponse(wireCounter.bytesRead, wireCounter.bytesRead)
+		}
 	}
 }
 

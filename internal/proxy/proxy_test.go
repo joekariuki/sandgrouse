@@ -91,5 +91,72 @@ func TestHandleProxy(t *testing.T) {
 			t.Errorf("query = %q, want %q", string(body), "limit=10&offset=0")
 		}
 	})
+}
 
+func TestHandleProxyWithCompressedResponse(t *testing.T) {
+	// Create a fake upstream that returns gzip-compressed JSON
+	originalBody := `{"id":"msg_123","type":"message","role":"assistant","content":[{"type":"text","text":"Hello! I'd be happy to help you with your reverse proxy implementation. The sandgrouse proxy is looking great so far with provider detection, compression, and streaming support all working correctly."}],"model":"claude-sonnet-4-20250514","stop_reason":"end_turn","usage":{"input_tokens":42,"output_tokens":128}}`
+	compressedBody, err := compressGzip([]byte(originalBody))
+	if err != nil {
+		t.Fatalf("compressGzip error: %v", err)
+	}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify the proxy requested compressed responses
+		ae := r.Header.Get("Accept-Encoding")
+		if ae == "" {
+			t.Error("proxy did not send Accept-Encoding header")
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Encoding", "gzip")
+		w.WriteHeader(http.StatusOK)
+		w.Write(compressedBody)
+	}))
+	defer upstream.Close()
+
+	originalProviders := providers
+	providers = map[string]Provider{
+		"anthropic": {Name: "anthropic", BaseURL: upstream.URL, CompressRequests: false},
+	}
+	defer func() { providers = originalProviders }()
+
+	srv := &Server{
+		ListenAddr: ":0",
+		Algorithm:  "gzip",
+		client:     &http.Client{},
+		stats:      &Stats{},
+	}
+
+	reqBody := `{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":"hi"}]}`
+	req := httptest.NewRequest("POST", "/v1/messages", strings.NewReader(reqBody))
+	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	srv.handleProxy(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	// Response should be decompressed (no Content-Encoding header to client)
+	if ce := resp.Header.Get("Content-Encoding"); ce != "" {
+		t.Errorf("Content-Encoding should be stripped, got %q", ce)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	if string(body) != originalBody {
+		t.Errorf("body = %q, want %q", string(body), originalBody)
+	}
+
+	// Stats should show response savings
+	wireBytes := srv.stats.responseWireBytes.Load()
+	origBytes := srv.stats.responseOriginalBytes.Load()
+	if wireBytes >= origBytes {
+		t.Errorf("wire bytes (%d) should be less than original bytes (%d)", wireBytes, origBytes)
+	}
 }
