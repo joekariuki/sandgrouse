@@ -93,3 +93,27 @@ func TestFormatBytes(t *testing.T) {
 		})
 	}
 }
+
+func TestStatsGetters(t *testing.T) {
+	s := &Stats{}
+	s.RecordRequest(1000, 800)
+	s.RecordRequest(2000, 1600)
+	s.RecordResponse(300, 1000)
+	s.RecordResponse(500, 2000)
+
+	if got := s.TotalRequests(); got != 2 {
+		t.Errorf("TotalRequests() = %d, want 2", got)
+	}
+	if got := s.RequestOriginalBytes(); got != 3000 {
+		t.Errorf("RequestOriginalBytes() = %d, want 3000", got)
+	}
+	if got := s.RequestCompressedBytes(); got != 2400 {
+		t.Errorf("RequestCompressedBytes() = %d, want 2400", got)
+	}
+	if got := s.ResponseOriginalBytes(); got != 3000 {
+		t.Errorf("ResponseOriginalBytes() = %d, want 3000", got)
+	}
+	if got := s.ResponseWireBytes(); got != 800 {
+		t.Errorf("ResponseWireBytes() = %d, want 800", got)
+	}
+}

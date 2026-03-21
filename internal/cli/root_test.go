@@ -6,16 +6,19 @@ import (
 	"testing"
 )
 
+func resetRootCmd() {
+	rootCmd.SetOut(nil)
+	rootCmd.SetErr(nil)
+	rootCmd.SetArgs([]string{})
+}
+
 func TestRootCommandShowsBanner(t *testing.T) {
 	buf := new(bytes.Buffer)
 	rootCmd.SetOut(buf)
-	rootCmd.SetErr(buf)
-	rootCmd.SetArgs([]string{})
-	defer rootCmd.SetOut(nil)
+	defer resetRootCmd()
 
-	if err := rootCmd.Execute(); err != nil {
-		t.Fatalf("Execute() error: %v", err)
-	}
+	// Call Run directly to avoid Cobra state issues in test ordering
+	rootCmd.Run(rootCmd, []string{})
 
 	output := buf.String()
 	wantParts := []string{

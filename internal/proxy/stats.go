@@ -41,6 +41,31 @@ func (s *Stats) Summary() string {
 		reqs, formatBytes(respWire), formatBytes(respOrig), formatBytes(saved), pct)
 }
 
+// TotalRequests returns the total number of proxied requests.
+func (s *Stats) TotalRequests() int64 {
+	return s.totalRequests.Load()
+}
+
+// RequestOriginalBytes returns total original request body bytes.
+func (s *Stats) RequestOriginalBytes() int64 {
+	return s.requestOriginalBytes.Load()
+}
+
+// RequestCompressedBytes returns total compressed request body bytes.
+func (s *Stats) RequestCompressedBytes() int64 {
+	return s.requestCompressedBytes.Load()
+}
+
+// ResponseOriginalBytes returns total decompressed response body bytes.
+func (s *Stats) ResponseOriginalBytes() int64 {
+	return s.responseOriginalBytes.Load()
+}
+
+// ResponseWireBytes returns total on-wire response body bytes.
+func (s *Stats) ResponseWireBytes() int64 {
+	return s.responseWireBytes.Load()
+}
+
 // formatBytes formats a byte count as a human-readable string.
 func formatBytes(b int64) string {
 	switch {

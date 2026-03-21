@@ -190,6 +190,11 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Stats returns the server's bandwidth statistics.
+func (s *Server) Stats() *Stats {
+	return s.stats
+}
+
 // compressionRatio calculate the percentage reduction.
 func compressionRatio(original, compressed int) float64 {
 	if original == 0 {
