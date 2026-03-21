@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joekariuki/sandgrouse/internal/dash"
 	"github.com/joekariuki/sandgrouse/internal/proxy"
 	"github.com/spf13/cobra"
 )
@@ -22,12 +23,13 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		addr, _ := cmd.Flags().GetString("addr")
 		algo, _ := cmd.Flags().GetString("algorithm")
+		dashAddr, _ := cmd.Flags().GetString("dash-addr")
 		foreground, _ := cmd.Flags().GetBool("foreground")
 
 		if foreground {
-			runForeground(cmd, addr, algo)
+			runForeground(cmd, addr, algo, dashAddr)
 		} else {
-			runDaemon(cmd, addr, algo)
+			runDaemon(cmd, addr, algo, dashAddr)
 		}
 	},
 }
@@ -35,6 +37,7 @@ var startCmd = &cobra.Command{
 func init() {
 	startCmd.Flags().StringP("addr", "a", ":8080", "address to listen on")
 	startCmd.Flags().String("algorithm", "brotli", "compression algorithm (gzip or brotli)")
+	startCmd.Flags().String("dash-addr", ":8585", "dashboard address")
 	startCmd.Flags().BoolP("foreground", "f", false, "run in foreground (default: daemon mode)")
 	rootCmd.AddCommand(startCmd)
 }
@@ -49,7 +52,7 @@ func statsFilePath() string {
 }
 
 // runForeground starts the proxy in the current process with signal handling.
-func runForeground(cmd *cobra.Command, addr, algo string) {
+func runForeground(cmd *cobra.Command, addr, algo, dashAddr string) {
 	// Write our PID so sg stop/status can find us
 	if err := writePID(os.Getpid()); err != nil {
 		log.Printf("warning: could not write PID file: %v", err)
@@ -74,10 +77,18 @@ func runForeground(cmd *cobra.Command, addr, algo string) {
 	}
 	srv.SetStats(stats)
 
-	// Start server in a goroutine
+	// Start proxy server in a goroutine
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- srv.Start()
+	}()
+
+	// Start dashboard server
+	dashboard := dash.New(dashAddr, srv)
+	go func() {
+		if err := dashboard.Start(); err != nil {
+			log.Printf("dashboard error: %v", err)
+		}
 	}()
 
 	// Save stats periodically (every 60 seconds)
@@ -108,8 +119,11 @@ func runForeground(cmd *cobra.Command, addr, algo string) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+		if err := dashboard.Shutdown(ctx); err != nil {
+			log.Printf("dashboard shutdown error: %v", err)
+		}
 		if err := srv.Shutdown(ctx); err != nil {
-			log.Printf("shutdown error: %v", err)
+			log.Printf("proxy shutdown error: %v", err)
 		}
 		log.Println("sandgrouse stopped")
 	case err := <-errCh:
@@ -120,7 +134,7 @@ func runForeground(cmd *cobra.Command, addr, algo string) {
 }
 
 // runDaemon spawns the proxy as a detached background process.
-func runDaemon(cmd *cobra.Command, addr, algo string) {
+func runDaemon(cmd *cobra.Command, addr, algo, dashAddr string) {
 	// Check if already running
 	if pid, running := checkAlreadyRunning(); running {
 		fmt.Fprintf(cmd.OutOrStdout(), "sandgrouse is already running (PID %d)\n", pid)
@@ -134,7 +148,7 @@ func runDaemon(cmd *cobra.Command, addr, algo string) {
 	}
 
 	// Spawn child in foreground mode, detached from this terminal
-	child := exec.Command(exePath, "start", "--foreground", "--addr", addr, "--algorithm", algo)
+	child := exec.Command(exePath, "start", "--foreground", "--addr", addr, "--algorithm", algo, "--dash-addr", dashAddr)
 	child.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	child.Stdout = nil
 	child.Stderr = nil
@@ -145,5 +159,6 @@ func runDaemon(cmd *cobra.Command, addr, algo string) {
 
 	fmt.Fprintf(cmd.OutOrStdout(), "sandgrouse started (PID %d)\n", child.Process.Pid)
 	fmt.Fprintf(cmd.OutOrStdout(), "Proxy listening on %s\n", addr)
+	fmt.Fprintf(cmd.OutOrStdout(), "Dashboard at http://localhost%s\n", dashAddr)
 	fmt.Fprintf(cmd.OutOrStdout(), "Stop with: sg stop\n")
 }
