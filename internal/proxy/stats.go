@@ -7,30 +7,38 @@ import (
 
 // Stats tracks bandwidth savings across proxy requests.
 type Stats struct {
-	totalRequests   atomic.Int64
-	originalBytes   atomic.Int64
-	compressedBytes atomic.Int64
+	totalRequests          atomic.Int64
+	requestOriginalBytes   atomic.Int64
+	requestCompressedBytes atomic.Int64
+	responseOriginalBytes  atomic.Int64
+	responseWireBytes      atomic.Int64
 }
 
-// Record logs a single request's compression result.
-func (s *Stats) Record(original, compressed int64) {
+// RecordRequest logs request body sizes.
+func (s *Stats) RecordRequest(original, compressed int64) {
 	s.totalRequests.Add(1)
-	s.originalBytes.Add(original)
-	s.compressedBytes.Add(compressed)
+	s.requestOriginalBytes.Add(original)
+	s.requestCompressedBytes.Add(compressed)
+}
+
+// RecordResponse logs response body sizes.
+func (s *Stats) RecordResponse(wireBytes, originalBytes int64) {
+	s.responseWireBytes.Add(wireBytes)
+	s.responseOriginalBytes.Add(originalBytes)
 }
 
 // Summary returns a formatted bandwidth savings summary.
 func (s *Stats) Summary() string {
 	reqs := s.totalRequests.Load()
-	orig := s.originalBytes.Load()
-	comp := s.compressedBytes.Load()
-	if orig == 0 {
-		return fmt.Sprintf("requests: %d | no data compressed yet", reqs)
+	respWire := s.responseWireBytes.Load()
+	respOrig := s.responseOriginalBytes.Load()
+	if respOrig == 0 {
+		return fmt.Sprintf("requests: %d | no response data tracked yet", reqs)
 	}
-	saved := orig - comp
-	pct := float64(saved) / float64(orig) * 100
-	return fmt.Sprintf("requests: %d | saved: %s of %s (%.0f%% reduction)",
-		reqs, formatBytes(saved), formatBytes(orig), pct)
+	saved := respOrig - respWire
+	pct := float64(saved) / float64(respOrig) * 100
+	return fmt.Sprintf("requests: %d | responses: %s on wire, %s original (%s saved, %.0f%% reduction)",
+		reqs, formatBytes(respWire), formatBytes(respOrig), formatBytes(saved), pct)
 }
 
 // formatBytes formats a byte count as a human-readable string.

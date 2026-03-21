@@ -128,7 +128,7 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 		compressionRatio(originalSize, len(outBody)))
 
 	// Record bandwidth stats
-	s.stats.Record(int64(originalSize), int64(len(outBody)))
+	s.stats.RecordRequest(int64(originalSize), int64(len(outBody)))
 
 	// Send request to upstream
 	resp, err := s.client.Do(outReq)

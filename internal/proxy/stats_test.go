@@ -5,51 +5,62 @@ import (
 	"testing"
 )
 
-func TestStatsRecord(t *testing.T) {
+func TestStatsRecordRequest(t *testing.T) {
 	s := &Stats{}
 
-	s.Record(1000, 300)
-	s.Record(2000, 500)
+	s.RecordRequest(1000, 1000) // no compression (APIs reject it)
+	s.RecordRequest(2000, 2000)
 
 	if got := s.totalRequests.Load(); got != 2 {
 		t.Errorf("totalRequests = %d, want 2", got)
 	}
-	if got := s.originalBytes.Load(); got != 3000 {
-		t.Errorf("originalBytes = %d, want 3000", got)
+	if got := s.requestOriginalBytes.Load(); got != 3000 {
+		t.Errorf("requestOriginalBytes = %d, want 3000", got)
 	}
-	if got := s.compressedBytes.Load(); got != 800 {
-		t.Errorf("compressedBytes = %d, want 800", got)
+}
+
+func TestStatsRecordResponse(t *testing.T) {
+	s := &Stats{}
+
+	s.RecordResponse(300, 1000) // 300 bytes on wire, 1000 decompressed
+	s.RecordResponse(500, 2000)
+
+	if got := s.responseWireBytes.Load(); got != 800 {
+		t.Errorf("responseWireBytes = %d, want 800", got)
+	}
+	if got := s.responseOriginalBytes.Load(); got != 3000 {
+		t.Errorf("responseOriginalBytes = %d, want 3000", got)
 	}
 }
 
 func TestStatsSummary(t *testing.T) {
 	tests := []struct {
 		name      string
-		records   [][2]int64 // {original, compressed}
+		responses [][2]int64 // {wireBytes, originalBytes}
 		wantParts []string
 	}{
 		{
-			name:      "no requests",
-			records:   nil,
-			wantParts: []string{"requests: 0", "no data compressed yet"},
+			name:      "no responses",
+			responses: nil,
+			wantParts: []string{"requests: 0", "no response data tracked yet"},
 		},
 		{
-			name:      "single request",
-			records:   [][2]int64{{1000, 300}},
-			wantParts: []string{"requests: 1", "70% reduction"},
+			name:      "single response with savings",
+			responses: [][2]int64{{300, 1000}},
+			wantParts: []string{"requests: 0", "70% reduction"},
 		},
 		{
-			name:      "multiple requests",
-			records:   [][2]int64{{1000, 300}, {2000, 500}},
-			wantParts: []string{"requests: 2", "73% reduction"},
+			name:      "multiple responses",
+			responses: [][2]int64{{300, 1000}, {500, 2000}},
+			wantParts: []string{"73% reduction"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Stats{}
-			for _, r := range tt.records {
-				s.Record(r[0], r[1])
+			for _, r := range tt.responses {
+				s.RecordResponse(r[0], r[1])
 			}
 			summary := s.Summary()
 			for _, part := range tt.wantParts {
