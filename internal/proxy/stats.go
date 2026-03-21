@@ -15,6 +15,7 @@ type Stats struct {
 	requestCompressedBytes atomic.Int64
 	responseOriginalBytes  atomic.Int64
 	responseWireBytes      atomic.Int64
+	snapshot               statsJSON // values at load time, for session calculation
 }
 
 // RecordRequest logs request body sizes.
@@ -69,6 +70,26 @@ func (s *Stats) ResponseWireBytes() int64 {
 	return s.responseWireBytes.Load()
 }
 
+// SessionRequests returns requests made in the current session only.
+func (s *Stats) SessionRequests() int64 {
+	return s.totalRequests.Load() - s.snapshot.TotalRequests
+}
+
+// SessionRequestOriginalBytes returns request bytes in the current session.
+func (s *Stats) SessionRequestOriginalBytes() int64 {
+	return s.requestOriginalBytes.Load() - s.snapshot.RequestOriginalBytes
+}
+
+// SessionResponseOriginalBytes returns decompressed response bytes in the current session.
+func (s *Stats) SessionResponseOriginalBytes() int64 {
+	return s.responseOriginalBytes.Load() - s.snapshot.ResponseOriginalBytes
+}
+
+// SessionResponseWireBytes returns on-wire response bytes in the current session.
+func (s *Stats) SessionResponseWireBytes() int64 {
+	return s.responseWireBytes.Load() - s.snapshot.ResponseWireBytes
+}
+
 // statsJSON is the JSON-serializable representation of Stats.
 type statsJSON struct {
 	TotalRequests          int64 `json:"total_requests"`
@@ -112,6 +133,7 @@ func (s *Stats) LoadFrom(path string) error {
 	s.requestCompressedBytes.Store(data.RequestCompressedBytes)
 	s.responseOriginalBytes.Store(data.ResponseOriginalBytes)
 	s.responseWireBytes.Store(data.ResponseWireBytes)
+	s.snapshot = data
 	return nil
 }
 

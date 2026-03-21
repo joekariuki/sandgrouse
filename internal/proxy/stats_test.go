@@ -145,6 +145,57 @@ func TestStatsLoadMissingFile(t *testing.T) {
 	}
 }
 
+func TestSessionStats(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "stats.json")
+
+	// Simulate a previous session: 10 requests, some data
+	prev := &Stats{}
+	for i := 0; i < 10; i++ {
+		prev.RecordRequest(1000, 1000)
+		prev.RecordResponse(300, 1000)
+	}
+	prev.SaveTo(path)
+
+	// New session: load previous, then add 3 more requests
+	s := &Stats{}
+	s.LoadFrom(path)
+	for i := 0; i < 3; i++ {
+		s.RecordRequest(2000, 2000)
+		s.RecordResponse(500, 2000)
+	}
+
+	// All-time should be 13
+	if got := s.TotalRequests(); got != 13 {
+		t.Errorf("TotalRequests() = %d, want 13", got)
+	}
+
+	// Session should be 3
+	if got := s.SessionRequests(); got != 3 {
+		t.Errorf("SessionRequests() = %d, want 3", got)
+	}
+	if got := s.SessionRequestOriginalBytes(); got != 6000 {
+		t.Errorf("SessionRequestOriginalBytes() = %d, want 6000", got)
+	}
+	if got := s.SessionResponseOriginalBytes(); got != 6000 {
+		t.Errorf("SessionResponseOriginalBytes() = %d, want 6000", got)
+	}
+	if got := s.SessionResponseWireBytes(); got != 1500 {
+		t.Errorf("SessionResponseWireBytes() = %d, want 1500", got)
+	}
+}
+
+func TestSessionStatsFromFreshStart(t *testing.T) {
+	// No previous stats loaded — session should equal all-time
+	s := &Stats{}
+	s.RecordRequest(1000, 1000)
+	s.RecordResponse(300, 1000)
+
+	if s.SessionRequests() != s.TotalRequests() {
+		t.Errorf("SessionRequests() = %d, want %d (same as all-time on fresh start)",
+			s.SessionRequests(), s.TotalRequests())
+	}
+}
+
 func TestStatsGetters(t *testing.T) {
 	s := &Stats{}
 	s.RecordRequest(1000, 800)
