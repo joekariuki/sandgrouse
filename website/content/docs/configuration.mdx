@@ -1,0 +1,57 @@
+---
+title: Configuration
+description: How to configure sandgrouse via flags and environment variables.
+---
+
+Sandgrouse uses sensible defaults and requires no configuration file for v0.1. All settings are controlled via CLI flags.
+
+## Defaults
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Proxy address | `:8080` | Where the proxy listens for requests |
+| Dashboard address | `:8585` | Where the web dashboard is served |
+| Compression algorithm | `brotli` | Algorithm for response decompression (`gzip` or `brotli`) |
+| Stats file | `~/.sandgrouse/stats.json` | Persistent stats storage |
+| PID file | `~/.sandgrouse/sg.pid` | Daemon process ID |
+
+## Environment variables
+
+Set these in your shell before launching your AI tool to route traffic through sandgrouse:
+
+```bash
+# For Claude Code and Anthropic SDK
+export ANTHROPIC_BASE_URL=http://localhost:8080
+
+# For Cursor, GitHub Copilot, and OpenAI SDK
+export OPENAI_BASE_URL=http://localhost:8080
+```
+
+These variables tell the AI tool's SDK to send requests to sandgrouse instead of directly to the cloud API. Sandgrouse detects the provider automatically from request headers and forwards to the correct upstream.
+
+## Data directory
+
+Sandgrouse stores its data in `~/.sandgrouse/`:
+
+```
+~/.sandgrouse/
+├── stats.json    # Persistent bandwidth statistics
+└── sg.pid        # PID file for daemon management
+```
+
+This directory is created automatically on first run.
+
+## Overriding defaults
+
+Use CLI flags to override any default:
+
+```bash
+# Custom proxy port
+sg start --addr :9090
+
+# Use gzip instead of brotli
+sg start --algorithm gzip
+
+# Custom dashboard port
+sg start --dash-addr :3000
+```

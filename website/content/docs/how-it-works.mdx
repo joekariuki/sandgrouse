@@ -1,0 +1,64 @@
+---
+title: How It Works
+description: Architecture and data flow of the sandgrouse proxy.
+---
+
+Sandgrouse is a local HTTP proxy that sits between your AI coding tools and the cloud API. It intercepts traffic on `localhost:8080`, optimizes it, and forwards it to the correct upstream provider.
+
+## Data flow
+
+```
+AI Tool (Claude Code, Cursor)
+    |
+    | Uncompressed JSON request (localhost — free)
+    v
+Sandgrouse Proxy (localhost:8080)
+    |
+    | Compressed response negotiation (Accept-Encoding: gzip, br)
+    | Duplicate request coalescing
+    | Per-request bandwidth tracking
+    v
+Cloud API (api.anthropic.com, api.openai.com)
+    |
+    | Compressed response (gzip/brotli over internet)
+    v
+Sandgrouse Proxy
+    |
+    | Decompressed response (localhost — free)
+    | Bandwidth savings recorded
+    v
+AI Tool (receives normal response)
+```
+
+The localhost legs between your AI tool and the proxy carry no bandwidth cost. Optimization is applied on the internet-facing leg between the proxy and the cloud API.
+
+## Response compression
+
+Sandgrouse sends `Accept-Encoding: gzip, br` on every outgoing request, asking the upstream API to compress its response. When the API responds with compressed data, sandgrouse:
+
+1. Records the compressed (on-wire) size
+2. Decompresses the response
+3. Records the original (decompressed) size
+4. Forwards the decompressed response to your AI tool
+5. Logs the savings
+
+This achieves ~37% compression per response on average. Responses are a small fraction of total traffic (requests are 99% of bandwidth), but every byte counts on a metered connection.
+
+## Request coalescing
+
+Claude Code and similar tools often send the same request twice in quick succession — a preflight request followed by a streaming request with an identical body. Sandgrouse detects these duplicates within a short time window and serves the second request from the first response, cutting upstream requests roughly in half.
+
+## Streaming (SSE)
+
+When the upstream API returns a streaming response (`Content-Type: text/event-stream`), sandgrouse flushes each server-sent event to the client immediately rather than buffering the full response. Streaming responses work exactly as they do without the proxy, with no added latency.
+
+## Provider detection
+
+Sandgrouse identifies the target provider by inspecting request headers, not URL paths. This means you set the same base URL (`http://localhost:8080`) for all providers and sandgrouse routes each request to the correct upstream automatically. See [Providers](/docs/providers) for details.
+
+## What sandgrouse does not do
+
+- It does not modify your request bodies or API keys
+- It does not cache responses (each request hits the upstream API)
+- It does not send data to any server other than the original API destination
+- It does not require any changes to your AI tool's code or configuration beyond the base URL

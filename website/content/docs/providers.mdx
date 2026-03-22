@@ -1,0 +1,57 @@
+---
+title: Providers
+description: How sandgrouse detects and routes traffic to Anthropic, OpenAI, and Google Gemini.
+---
+
+Sandgrouse automatically detects which LLM provider a request is intended for by inspecting the request headers. No configuration is needed — just point your tool at the proxy and sandgrouse handles routing.
+
+## Supported providers
+
+| Provider | Detection | Upstream URL |
+|----------|-----------|-------------|
+| Anthropic | `anthropic-version` header present | `https://api.anthropic.com` |
+| Google Gemini | `x-goog-api-key` header present | `https://generativelanguage.googleapis.com` |
+| OpenAI | `Authorization: Bearer` header present | `https://api.openai.com` |
+
+Detection is evaluated in the order listed above. If a request contains both `x-goog-api-key` and `Authorization: Bearer`, it is routed as a Gemini request.
+
+## Anthropic (Claude Code)
+
+Set the base URL before launching Claude Code:
+
+```bash
+export ANTHROPIC_BASE_URL=http://localhost:8080
+```
+
+Claude Code sends the `anthropic-version` and `x-api-key` headers on every request. Sandgrouse detects these and forwards to `https://api.anthropic.com`.
+
+## OpenAI (Cursor, GitHub Copilot)
+
+```bash
+export OPENAI_BASE_URL=http://localhost:8080
+```
+
+Any request with an `Authorization: Bearer` header that doesn't match another provider is routed to `https://api.openai.com`. This covers Cursor, GitHub Copilot, and any tool using the OpenAI SDK.
+
+## Google Gemini
+
+```bash
+export GEMINI_BASE_URL=http://localhost:8080
+```
+
+Requests with the `x-goog-api-key` header are routed to `https://generativelanguage.googleapis.com`.
+
+## Unknown providers
+
+If sandgrouse cannot detect the provider from the request headers, it returns a `400 Bad Request` with a message listing the expected headers. This prevents silent routing failures.
+
+## How routing works
+
+When a request arrives at `localhost:8080/v1/messages`, sandgrouse:
+
+1. Inspects the request headers to identify the provider
+2. Rewrites the URL to the provider's upstream (e.g., `https://api.anthropic.com/v1/messages`)
+3. Forwards all headers and the request body transparently
+4. Returns the upstream response to the client
+
+Your API keys are passed through as-is. Sandgrouse never stores, logs, or modifies authentication credentials.

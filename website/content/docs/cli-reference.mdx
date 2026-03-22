@@ -1,0 +1,68 @@
+---
+title: CLI Reference
+description: Complete reference for all sg commands and flags.
+---
+
+## sg start
+
+Start the sandgrouse compression proxy. Traffic is proxied to upstream LLM APIs with response compression.
+
+```bash
+sg start [flags]
+```
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--addr` | `-a` | `:8080` | Address to listen on |
+| `--algorithm` | | `brotli` | Compression algorithm (`gzip` or `brotli`) |
+| `--dash-addr` | | `:8585` | Dashboard address |
+| `--foreground` | `-f` | `false` | Run in foreground instead of as a daemon |
+
+By default, `sg start` runs as a background daemon. Use `--foreground` to keep it in the current terminal, which is useful for debugging or seeing real-time logs.
+
+### Examples
+
+```bash
+# Start with defaults (proxy on :8080, dashboard on :8585)
+sg start
+
+# Start on a custom port
+sg start --addr :9090
+
+# Start in foreground with gzip compression
+sg start -f --algorithm gzip
+
+# Start with custom dashboard port
+sg start --dash-addr :3000
+```
+
+## sg stop
+
+Stop the running sandgrouse proxy by sending SIGTERM. Stats are saved automatically before shutdown.
+
+```bash
+sg stop
+```
+
+## sg status
+
+Check whether the sandgrouse proxy is currently running, and show uptime if it is.
+
+```bash
+sg status
+```
+
+## sg stats
+
+Show bandwidth savings from the sandgrouse proxy. Displays both current session and all-time cumulative statistics.
+
+```bash
+sg stats
+```
+
+Output includes:
+- Total requests proxied
+- Request data volume
+- Response data (original vs on-wire)
+- Bandwidth saved with compression ratio
+- Session vs all-time breakdown

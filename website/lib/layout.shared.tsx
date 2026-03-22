@@ -11,6 +11,12 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: 'Sandgrouse',
     },
+    links: [
+      {
+        text: 'Documentation',
+        url: '/docs',
+      },
+    ],
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
   };
 }

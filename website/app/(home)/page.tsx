@@ -1,11 +1,11 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { CopyButton } from '@/components/copy-button';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { CopyButton } from "@/components/copy-button";
 
 export const metadata: Metadata = {
-  title: 'Sandgrouse - Stop burning data bundles on AI tools',
+  title: "Sandgrouse - Stop burning data bundles on AI tools",
   description:
-    'Open source LLM traffic optimization proxy. Cuts Claude Code bandwidth in half and shows you where the rest goes. Built for developers on metered connections.',
+    "Open source LLM traffic optimization proxy. Cuts Claude Code bandwidth in half and shows you where the rest goes. Built for developers on metered connections.",
 };
 
 export default function HomePage() {
@@ -20,8 +20,8 @@ export default function HomePage() {
           Sandgrouse optimizes LLM API traffic so developers on metered
           connections get full AI power at a fraction of the data cost.
         </p>
-        <div className="relative inline-block">
-          <pre className="bg-fd-card border border-fd-border rounded-lg px-6 py-3 text-sm font-mono">
+        <div className="relative inline-block w-full max-w-md">
+          <pre className="bg-fd-card border border-fd-border rounded-lg px-6 pr-10 py-3 text-sm font-mono text-left">
             npx sandgrouse
           </pre>
           <CopyButton text="npx sandgrouse" />
@@ -54,7 +54,7 @@ export default function HomePage() {
           One proxy. Half the data. Full visibility.
         </h2>
         <pre className="bg-fd-card border border-fd-border rounded-lg p-6 text-sm font-mono text-fd-muted-foreground overflow-x-auto">
-{`Your AI tool (Claude Code, Cursor, etc.)
+          {`Your AI tool (Claude Code, Cursor, etc.)
          |
          |  Sends every request twice (~150KB each, growing)
          v
@@ -82,7 +82,7 @@ export default function HomePage() {
               Step 1: Install
             </p>
             <div className="relative">
-              <pre className="bg-fd-card border border-fd-border rounded-lg px-4 py-3 text-sm font-mono">
+              <pre className="bg-fd-card border border-fd-border rounded-lg px-4 pr-12 py-3 text-sm font-mono">
                 npm install -g sandgrouse
               </pre>
               <CopyButton text="npm install -g sandgrouse" />
@@ -93,7 +93,7 @@ export default function HomePage() {
               Step 2: Start the proxy
             </p>
             <div className="relative">
-              <pre className="bg-fd-card border border-fd-border rounded-lg px-4 py-3 text-sm font-mono">
+              <pre className="bg-fd-card border border-fd-border rounded-lg px-4 pr-12 py-3 text-sm font-mono">
                 sg start
               </pre>
               <CopyButton text="sg start" />
@@ -104,7 +104,7 @@ export default function HomePage() {
               Step 3: Point your AI tools at it
             </p>
             <div className="relative">
-              <pre className="bg-fd-card border border-fd-border rounded-lg px-4 py-3 text-sm font-mono">
+              <pre className="bg-fd-card border border-fd-border rounded-lg px-4 pr-12 py-3 text-sm font-mono">
                 export ANTHROPIC_BASE_URL=http://localhost:8080
               </pre>
               <CopyButton text="export ANTHROPIC_BASE_URL=http://localhost:8080" />
@@ -114,7 +114,7 @@ export default function HomePage() {
         <p className="text-fd-muted-foreground text-sm text-center mt-6">
           Also available via Homebrew (
           <code className="text-fd-foreground">brew install sandgrouse</code>),
-          direct download, or{' '}
+          direct download, or{" "}
           <code className="text-fd-foreground">npx sandgrouse</code>.
         </p>
       </section>
@@ -183,7 +183,7 @@ export default function HomePage() {
           </Link>
         </div>
         <p>
-          MIT Licensed. Built from Nairobi by{' '}
+          MIT Licensed. Built from Nairobi by{" "}
           <Link
             href="https://github.com/joekariuki"
             className="text-fd-foreground hover:underline"

@@ -1,0 +1,64 @@
+---
+title: FAQ
+description: Frequently asked questions about sandgrouse.
+---
+
+## Does sandgrouse see my API keys?
+
+Your API keys pass through the proxy in request headers, but sandgrouse never stores, logs, or modifies them. All traffic goes directly to the original API destination. The proxy runs entirely on your machine.
+
+## Does it work with streaming responses?
+
+Yes. Sandgrouse detects `text/event-stream` responses and flushes each server-sent event immediately. There is no added latency or buffering for streaming.
+
+## Which AI tools are supported?
+
+Any tool that lets you set a custom API base URL. This includes:
+
+- **Claude Code** — `export ANTHROPIC_BASE_URL=http://localhost:8080`
+- **Cursor** — `export OPENAI_BASE_URL=http://localhost:8080`
+- **GitHub Copilot** — `export OPENAI_BASE_URL=http://localhost:8080`
+- **ChatGPT API clients** — `export OPENAI_BASE_URL=http://localhost:8080`
+- **Google Gemini clients** — `export GEMINI_BASE_URL=http://localhost:8080`
+
+Any tool using the Anthropic, OpenAI, or Google Gemini SDK should work.
+
+## How much bandwidth does it actually save?
+
+Based on real-world testing with Claude Code:
+
+- **Response compression:** ~37% per response (gzip/brotli negotiation with upstream API)
+- **Request coalescing:** ~50% reduction in upstream requests (duplicate preflight elimination)
+- **Overall session savings:** varies by workload, but every request and response is tracked in the dashboard so you can see exact numbers
+
+The biggest finding from testing: a single 6-minute Claude Code session generates ~5.5MB of request data across 47 API calls, with each request growing from 64KB to 148KB as context accumulates. Requests are 99% of total bandwidth.
+
+## Why can't you compress request bodies?
+
+We tried. Both Anthropic and OpenAI APIs reject compressed request bodies — they parse the raw bytes as JSON without checking the `Content-Encoding` header. This is a server-side limitation, not something the proxy can work around. The compression infrastructure is built and ready for when providers add support.
+
+## Does it add latency?
+
+Minimal. The proxy runs on localhost, so the network hop between your AI tool and sandgrouse is effectively instant. The only added processing is header inspection and response decompression, which takes microseconds.
+
+## Can I use it on a remote server?
+
+Sandgrouse is designed for local use. Running it on a remote server would add a network hop between your AI tool and the proxy, which defeats the purpose. If you need a remote setup, bind the proxy to a specific address with `sg start --addr 0.0.0.0:8080`.
+
+## Where are stats stored?
+
+Stats are saved to `~/.sandgrouse/stats.json` and persist across proxy restarts. They accumulate over time so you can track your total bandwidth savings.
+
+## How do I uninstall?
+
+```bash
+npm uninstall -g sandgrouse
+rm -rf ~/.sandgrouse
+```
+
+Or if installed via Homebrew:
+
+```bash
+brew uninstall sandgrouse
+rm -rf ~/.sandgrouse
+```

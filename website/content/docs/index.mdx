@@ -1,13 +1,70 @@
 ---
-title: Hello World
-description: Your first document
+title: Getting Started
+description: Install sandgrouse and start saving bandwidth in under a minute.
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+Sandgrouse is an open source proxy that sits between your AI coding tools and the cloud API. It compresses response traffic, coalesces duplicate requests, and shows you exactly where your bandwidth goes.
 
-## What is Next?
+## Install
 
-<Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
-</Cards>
+```bash
+npm install -g sandgrouse
+```
+
+Or use Homebrew:
+
+```bash
+brew install sandgrouse
+```
+
+Or run directly without installing:
+
+```bash
+npx sandgrouse
+```
+
+## Start the proxy
+
+```bash
+sg start
+```
+
+This starts the proxy on `localhost:8080` and the dashboard on `localhost:8585`. The proxy runs as a background daemon by default.
+
+## Point your AI tools at it
+
+Set the base URL environment variable for your tool before launching it:
+
+```bash
+# Claude Code
+export ANTHROPIC_BASE_URL=http://localhost:8080
+
+# Cursor / OpenAI-compatible tools
+export OPENAI_BASE_URL=http://localhost:8080
+```
+
+Then use your AI tool as normal. All traffic flows through sandgrouse transparently.
+
+## Check your savings
+
+Open the dashboard in your browser:
+
+```
+http://localhost:8585
+```
+
+Or check from the terminal:
+
+```bash
+sg stats
+```
+
+You'll see per-request sizes, response compression ratios, and cumulative bandwidth savings across sessions.
+
+## Stop the proxy
+
+```bash
+sg stop
+```
+
+Stats are saved automatically and persist across restarts.
