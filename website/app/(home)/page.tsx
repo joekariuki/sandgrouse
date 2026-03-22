@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
 
@@ -116,6 +117,22 @@ export default function HomePage() {
           <code className="text-fd-foreground">brew install sandgrouse</code>),
           direct download, or{" "}
           <code className="text-fd-foreground">npx sandgrouse</code>.
+        </p>
+      </section>
+
+      {/* Dashboard preview */}
+      <section className="max-w-3xl w-full">
+        <div className="rounded-lg border border-fd-border overflow-hidden shadow-lg">
+          <Image
+            src="/dashboard.png"
+            alt="Sandgrouse bandwidth dashboard showing real-time request tracking and compression savings"
+            width={1200}
+            height={675}
+            className="w-full h-auto"
+          />
+        </div>
+        <p className="text-fd-muted-foreground text-sm text-center mt-4">
+          Real-time bandwidth dashboard at localhost:8585
         </p>
       </section>
 
