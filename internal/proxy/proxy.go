@@ -88,7 +88,7 @@ func (s *Server) handleProxy(w http.ResponseWriter, r *http.Request) {
 	provider, ok := detectProvider(r)
 
 	if !ok {
-		http.Error(w, "unknown provider: set anthropic-version or Authorization header", http.StatusBadRequest)
+		http.Error(w, "unknown provider: set anthropic-version, x-goog-api-key, or Authorization header", http.StatusBadRequest)
 		return
 	}
 

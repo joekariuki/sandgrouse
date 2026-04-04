@@ -45,6 +45,30 @@ func TestDetectProvider(t *testing.T) {
 			headers: map[string]string{"Authorization": "Basic dXNlxjpwYXNz"},
 			wantOK:  false,
 		},
+		{
+			name:     "gemini detected from x-goog-api-key header",
+			headers:  map[string]string{"x-goog-api-key": "AIzaSy-test123"},
+			wantName: "gemini",
+			wantOK:   true,
+		},
+		{
+			name:     "gemini takes priority over bearer when both present",
+			headers:  map[string]string{"x-goog-api-key": "AIzaSy-test123", "Authorization": "Bearer ya29.oauth-token"},
+			wantName: "gemini",
+			wantOK:   true,
+		},
+		{
+			name:     "anthropic takes priority over gemini when both present",
+			headers:  map[string]string{"anthropic-version": "2023-06-01", "x-goog-api-key": "AIzaSy-test123"},
+			wantName: "anthropic",
+			wantOK:   true,
+		},
+		{
+			name:     "all three provider headers present, anthropic wins",
+			headers:  map[string]string{"anthropic-version": "2023-06-01", "x-goog-api-key": "AIzaSy-test123", "Authorization": "Bearer sk-test"},
+			wantName: "anthropic",
+			wantOK:   true,
+		},
 	}
 
 	for _, tt := range tests {
